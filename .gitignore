@@ -1,0 +1,11 @@
+# Environment
+.env
+
+# Local binaries/build output
+gator
+*.exe
+
+# Editor/OS clutter
+.DS_Store
+.idea/
+.vscode/
