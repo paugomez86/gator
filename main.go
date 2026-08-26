@@ -8,15 +8,16 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/paugomez86/gator/internal/config"
 	"github.com/paugomez86/gator/internal/database"
-	"github.com/paugomez86/gator/internal/repl"
+	"github.com/paugomez86/gator/internal/handlers"
 )
 
 func main() {
 	var state config.State
-	var commands repl.Commands
-	var command repl.Command
+	var commands handlers.Commands
+	var command handlers.Command
 	var err error
 
+	// Handling arguments
 	if len(os.Args) < 2 {
 		fmt.Printf("Invalid argument\n")
 		os.Exit(1)
@@ -24,11 +25,11 @@ func main() {
 	command.Name = os.Args[1]
 	command.Args = os.Args[2:]
 
+	// Reading config file
 	cfg, err := config.Read()
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
-
 	state.Cfg = &cfg
 
 	// Opening database connection
@@ -39,12 +40,14 @@ func main() {
 	}
 	state.Db = database.New(db)
 
-	commands.Map = make(map[string]func(*config.State, repl.Command) error)
-	commands.Register("login", repl.HandlerLogin)
-	commands.Register("register", repl.HandlerRegister)
-	commands.Register("reset", repl.HandlerReset)
-	commands.Register("users", repl.HandlerUsers)
+	// Registering commands
+	commands.Map = make(map[string]func(*config.State, handlers.Command) error)
+	commands.Register("login", handlers.HandlerLogin)
+	commands.Register("register", handlers.HandlerRegister)
+	commands.Register("reset", handlers.HandlerReset)
+	commands.Register("users", handlers.HandlerUsers)
 
+	// Running given command
 	if err = commands.Run(&state, command); err != nil {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
