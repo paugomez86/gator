@@ -21,9 +21,25 @@ type Commands struct {
 	Map map[string]func(*config.State, Command) error
 }
 
+func (c Commands) Run(s *config.State, cmd Command) error {
+	if command, ok := c.Map[cmd.Name]; ok {
+		if err := command(s, cmd); err != nil {
+			return fmt.Errorf("%v", err)
+		}
+
+	} else {
+		return fmt.Errorf("Invalid command")
+	}
+	return nil
+}
+
+func (c Commands) Register(name string, f func(*config.State, Command) error) {
+	c.Map[name] = f
+}
+
 func HandlerLogin(s *config.State, cmd Command) error {
 	if len(cmd.Args) != 1 {
-		return fmt.Errorf("Invalid argument")
+		return fmt.Errorf("Expecting 1 arg")
 	}
 
 	user, err := s.Db.GetUser(context.Background(), cmd.Args[0])
@@ -45,10 +61,11 @@ func HandlerLogin(s *config.State, cmd Command) error {
 
 func HandlerRegister(s *config.State, cmd Command) error {
 	if len(cmd.Args) != 1 {
-		return fmt.Errorf("Invalid argument")
+		return fmt.Errorf("Expecting 1 arg")
 	}
 
 	var args database.CreateUserParams
+	var user database.User
 
 	args.ID = uuid.New()
 	args.CreatedAt = time.Now()
@@ -64,18 +81,36 @@ func HandlerRegister(s *config.State, cmd Command) error {
 	return nil
 }
 
-func (c Commands) Run(s *config.State, cmd Command) error {
-	if command, ok := c.Map[cmd.Name]; ok {
-		if err := command(s, cmd); err != nil {
-			return fmt.Errorf("%v", err)
-		}
-
-	} else {
-		return fmt.Errorf("Invalid command")
+func HandlerReset(s *config.State, cmd Command) error {
+	if len(cmd.Args) != 0 {
+		return fmt.Errorf("Expecting no args")
 	}
+
+	if err := s.Db.DeleteUsers(context.Background()); err != nil {
+		return err
+	}
+	fmt.Printf("Database reset\n")
 	return nil
 }
 
-func (c Commands) Register(name string, f func(*config.State, Command) error) {
-	c.Map[name] = f
+func HandlerUsers(s *config.State, cmd Command) error {
+	if len(cmd.Args) != 0 {
+		return fmt.Errorf("Expecting no args")
+	}
+
+	var users []database.User
+
+	users, err := s.Db.GetUsers(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, user := range users {
+		fmt.Printf("%v", user.Name)
+		if user.Name == s.Cfg.CurrentUserName {
+			fmt.Printf(" (current)")
+		}
+		fmt.Printf("\n")
+	}
+	return nil
 }

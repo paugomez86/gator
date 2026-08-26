@@ -42,9 +42,12 @@ func main() {
 	commands.Map = make(map[string]func(*config.State, repl.Command) error)
 	commands.Register("login", repl.HandlerLogin)
 	commands.Register("register", repl.HandlerRegister)
+	commands.Register("reset", repl.HandlerReset)
+	commands.Register("users", repl.HandlerUsers)
 
 	if err = commands.Run(&state, command); err != nil {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
+	os.Exit(0)
 }
