@@ -10,6 +10,7 @@ import (
 
 	"github.com/paugomez86/gator/internal/config"
 	"github.com/paugomez86/gator/internal/database"
+	"github.com/paugomez86/gator/internal/rss"
 )
 
 type Command struct {
@@ -39,8 +40,10 @@ func (c Commands) Register(name string, f func(*config.State, Command) error) {
 
 func HandlerLogin(s *config.State, cmd Command) error {
 	if len(cmd.Args) != 1 {
-		return fmt.Errorf("Expecting 1 arg")
+		return fmt.Errorf("Expecting 1 argument")
 	}
+
+	var user database.User
 
 	user, err := s.Db.GetUser(context.Background(), cmd.Args[0])
 	if err != nil {
@@ -61,7 +64,7 @@ func HandlerLogin(s *config.State, cmd Command) error {
 
 func HandlerRegister(s *config.State, cmd Command) error {
 	if len(cmd.Args) != 1 {
-		return fmt.Errorf("Expecting 1 arg")
+		return fmt.Errorf("Expecting 1 argument")
 	}
 
 	var args database.CreateUserParams
@@ -83,7 +86,7 @@ func HandlerRegister(s *config.State, cmd Command) error {
 
 func HandlerReset(s *config.State, cmd Command) error {
 	if len(cmd.Args) != 0 {
-		return fmt.Errorf("Expecting no args")
+		return fmt.Errorf("Expecting no arguments")
 	}
 
 	if err := s.Db.DeleteUsers(context.Background()); err != nil {
@@ -95,7 +98,7 @@ func HandlerReset(s *config.State, cmd Command) error {
 
 func HandlerUsers(s *config.State, cmd Command) error {
 	if len(cmd.Args) != 0 {
-		return fmt.Errorf("Expecting no args")
+		return fmt.Errorf("Expecting no arguments")
 	}
 
 	var users []database.User
@@ -112,5 +115,84 @@ func HandlerUsers(s *config.State, cmd Command) error {
 		}
 		fmt.Printf("\n")
 	}
+	return nil
+}
+
+func HandlerAgg(s *config.State, cmd Command) error {
+	/* if len(cmd.Args) != 1 {
+		return fmt.Errorf("Expecting 1 argument")
+	} */
+
+	var ptrData *rss.RSSFeed
+	//feedUrl := cmd.Args[0]
+
+	feedUrl := "https://www.wagslane.dev/index.xml"
+
+	ptrData, err := rss.FetchFeed(context.Background(), feedUrl)
+	if err != nil {
+		return err
+	}
+
+	if ptrData != nil {
+		fmt.Printf("%v\n", ptrData)
+	}
+
+	return nil
+}
+
+func HandlerAddFeed(s *config.State, cmd Command) error {
+	if len(cmd.Args) != 2 {
+		return fmt.Errorf("Expecting 2 arguments")
+	}
+
+	var args database.CreateFeedParams
+	var currentUser database.User
+
+	// Retreaving user from database based on current logged user
+	currentUser, err := s.Db.GetUser(context.Background(), s.Cfg.CurrentUserName)
+	if err != nil {
+		return err
+	}
+
+	args.ID = uuid.New()
+	args.CreatedAt = time.Now()
+	args.UpdatedAt = time.Now()
+	args.Name = cmd.Args[0]
+	args.Url = cmd.Args[1]
+	args.UserID = currentUser.ID
+
+	if err := s.Db.CreateFeed(context.Background(), args); err != nil {
+		return err
+	}
+
+	fmt.Printf("Feed created:\n")
+	fmt.Printf("ID: %v\nCreated at: %v\nUpdated at: %v\nName: %v\nURL: %v\nUser ID: %v\n", args.ID, args.CreatedAt, args.UpdatedAt, args.Name, args.Url, args.UserID)
+
+	return nil
+}
+
+func HandlerFeeds(s *config.State, cmd Command) error {
+	if len(cmd.Args) != 0 {
+		return fmt.Errorf("Expecting no arguments")
+	}
+
+	var feeds []database.GetFeedsRow
+
+	feeds, err := s.Db.GetFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, feed := range feeds {
+		fmt.Printf("Feed name: %v\nURL: %v\nUser: %v\n\n", feed.Name, feed.Url, feed.Username)
+	}
+	return nil
+}
+
+func HandlerFollow(s *config.State, cmd Command) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("Expecting 1 argument")
+	}
+
 	return nil
 }

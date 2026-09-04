@@ -46,6 +46,10 @@ func main() {
 	commands.Register("register", handlers.HandlerRegister)
 	commands.Register("reset", handlers.HandlerReset)
 	commands.Register("users", handlers.HandlerUsers)
+	commands.Register("agg", handlers.HandlerAgg)
+	commands.Register("addfeed", handlers.HandlerAddFeed)
+	commands.Register("feeds", handlers.HandlerFeeds)
+	commands.Register("follow", handlers.HandlerFollow)
 
 	// Running given command
 	if err = commands.Run(&state, command); err != nil {
